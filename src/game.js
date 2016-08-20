@@ -70,27 +70,29 @@ function drawEmptyScreen() {
 // -------------------------------------------------------------------------
 // World class
 function World() {
-
+    this.mapH = 16;
+    this.mapW = 21;
     this.map = [
-        "...................",
-        "......DDD..........",
-        ".....WWDWW.........",
-        "....WWWDWGW........",
-        "....WWWDWWW........",
-        "....D..D...........",
-        "..WWWW.WWWWGDD.....",
-        "..WWWG.WWWW..D.....",
-        ".......DDD.GWGGG...",
-        "....GWWWWD.WWDDWW..",
-        ".....WWWWDWGWWWWW..",
-        "......WWWDG.G.DG...",
-        ".......WWD.G.GGG...",
-        "........GWWGWW.....",
-        ".........WWGWW.....",
-        "...........G......."
+        "....................",
+        ".......GDG..........",
+        "......WWDWW.........",
+        ".....WWWDWGW........",
+        ".....WWWDWWW........",
+        "54321543215432154321",
+        "...WWWW.WWWWGDD.....",
+        "...WWWG.WWWW..D.....",
+        "........DDD.GWGGG...",
+        ".....GWWWWD.WWDDWW..",
+        "......WWWWDWGWWWWW..",
+        ".......WWWDG.G.DG...",
+        "........WWD.G.GGG...",
+        ".........GWWGWW.....",
+        "..........WWGWW.....",
+        "............G......."
     ];
     this.backupmap = this.map.slice();
     this.reset = function() {
+        this.platformTick = 4;
         this.map = this.backupmap.slice();
     }
     this.at = function(x, y) {
@@ -102,14 +104,19 @@ function World() {
             this.map[y].substring(x + 1);
     }
     this.calcGridX = function(x, y) {
-        return -320 + x * 60 + y * 65;
+        return -380 + x * 60 + y * 65;
     }
     this.calcGridY = function(x, y) {
-        return 380 + y * 50 - x * 47;
+        return 430 + y * 50 - x * 47;
     }
     this.update = function() {
-        for(var y = 0; y < 16; y++) {
-            for(var x = 18; x >= 0; x--) {
+        // Move platforms
+        if (++this.platformTick == 6) {
+            this.platformTick = 1;
+        }
+        // Clear falling blocks
+        for(var y = 0; y < this.mapH; y++) {
+            for(var x = this.mapW - 1; x >= 0; x--) {
                 tile = world.at(x, y);
                 if (tile == 'd') {
                     world.change(x, y, '.');
@@ -118,8 +125,8 @@ function World() {
         }
     }
     this.draw = function() {
-        for(var y = 0; y < 16; y++) {
-            for(var x = 18; x >= 0; x--) {
+        for(var y = 0; y < this.mapH; y++) {
+            for(var x = this.mapW - 1; x >= 0; x--) {
                 tile = world.at(x, y);
                 var nx = world.calcGridX(x, y);
                 var ny = world.calcGridY(x, y);
@@ -131,8 +138,15 @@ function World() {
                 } else if (tile == "D") {
                     drawImg("DARK", nx, ny);
                 } else if (tile == "d") {
+                    // Falling block
                     ny += (gamescale*70);
                     drawImg("DARK", nx, ny);
+                }
+
+                if (tile == this.platformTick) {
+                    nx -= (nx - world.calcGridX(x + -1, y)) * gamescale;
+                    ny -= (ny - world.calcGridY(x + -1, y)) * gamescale; 
+                    drawImg("GRAY", nx, ny);
                 }
 
                 if (player.isDrawPosition(x, y)) {
@@ -148,6 +162,7 @@ function World() {
 function Player() {
 
     this.reset = function() {
+        gametick = gamespeed / 2;
         this.falling = false;
         this.gx = 10;
         this.gy = 10;
@@ -180,27 +195,28 @@ function Player() {
         if (this.falling) {
             world.reset();
             this.reset();
-        }
-
-        this.gy = this.nextgy;
-        this.gx = this.nextgx;
-        var tile = world.at(this.gx, this.gy);
-
-        if (tile == '.') {
-            this.falling = true;
         } else {
-            if (this.nextdir == "UP") { this.nextgy = this.gy - 1; }
-            if (this.nextdir == "DOWN") { this.nextgy = this.gy + 1; }
-            if (this.nextdir == "RIGHT") { this.nextgx = this.gx + 1; }
-            if (this.nextdir == "LEFT") { this.nextgx = this.gx - 1; }
-            this.direction = this.nextdir;
-        }
+            this.gy = this.nextgy;
+            this.gx = this.nextgx;
+            var tile = world.at(this.gx, this.gy);
 
-        if (tile == 'W') {
-            world.change(this.gx, this.gy, 'G');
-        }
-        if (tile == 'D') {
-            world.change(this.gx, this.gy, 'd');
+            if (tile == '.' ||
+            ((tile == '1' || tile == '2' || tile == '3' || tile == '4' || tile == '5') && (tile != world.platformTick))) {
+                this.falling = true;
+            } else {
+                if (this.nextdir == "UP") { this.nextgy = this.gy - 1; }
+                if (this.nextdir == "DOWN") { this.nextgy = this.gy + 1; }
+                if (this.nextdir == "RIGHT") { this.nextgx = this.gx + 1; }
+                if (this.nextdir == "LEFT") { this.nextgx = this.gx - 1; }
+                this.direction = this.nextdir;
+            }
+
+            if (tile == 'W') {
+                world.change(this.gx, this.gy, 'G');
+            }
+            if (tile == 'D') {
+                world.change(this.gx, this.gy, 'd');
+            }
         }
     }
     this.isDrawPosition = function(x, y) {
