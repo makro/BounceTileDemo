@@ -58,6 +58,10 @@ htmlCanvas.addEventListener("keyup",
 
 // -------------------------------------------------------------------------
 // Draw functions
+function drawImg(key, x, y) {
+    canvas.drawImage(pics[key], x, y);
+}
+
 function drawEmptyScreen() {
     canvas.fillStyle = "black";
     canvas.fillRect(0, 0, canvasW, canvasH);
@@ -79,10 +83,65 @@ function drawTestData() {
     }
 }
 
+function drawWorld() {
+
+    var world = [
+        "...................",
+        "......WWW..........",
+        ".....WWWWW.........",
+        "....WWWWWWW........",
+        "...GGGGGGGGG.......",
+        "..GGGGGGGGGGG......",
+        "..GGGGGGGGGGGG.....",
+        "..DDDDDDDDDDDDD....",
+        "...DDDDD.DDDDDDD...",
+        "....DDDDDDDDDDDWW..",
+        ".....DDDDDDDDDDWW..",
+        "......DDDDDDDDDWW..",
+        ".......DDD.DDDDD...",
+        "........DDDDDDD....",
+        ".........DGGGD.....",
+        "..........GGG......"
+    ];
+
+    for(var y = 0; y < 16; y++) {
+        for(var x = 18; x >= 0; x--) {
+            tile = world[y][x];
+            //console.log("tile:" + tile);
+            var nx = -320 + x * 60 + y * 65;
+            var ny = 380 + y * 50 - x * 47;
+
+            if (tile == "G") {
+                drawImg("GRAY", nx, ny);
+            } else if (tile == "W") {
+                drawImg("WHITE", nx, ny);
+            } else if (tile == "D") {
+                drawImg("DARK", nx, ny);
+            }
+        }
+    }
+}
+
 // -------------------------------------------------------------------------
-// Screen redraw loop
-setInterval(function() {
-    drawEmptyScreen();
-    drawTestData();
-}, 20 /* milliseconds -> 50Hz */); 
+// Load images and start
+
+var pics = {
+    "WHITE": "src/img/whitetile.png",
+    "GRAY": "src/img/graytile.png",
+    "DARK": "src/img/darktile.png"
+};
+
+preloadImages(pics, function() {
+    console.log("Callback!");
+    _.each(Object.keys(pics), function(key) {
+        console.log("CB: " + key + " = " + pics[key]);
+    });
+
+    // Core loop
+    setInterval(function() {
+        drawEmptyScreen();
+        drawWorld();
+        drawTestData();
+    }, 20 /* milliseconds -> 50Hz */); 
+});
 
