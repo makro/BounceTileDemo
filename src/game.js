@@ -67,6 +67,22 @@ function drawEmptyScreen() {
     canvas.fillRect(1, 1, canvasW-2, canvasH-2);
 }
 
+function rgb(r, g, b){
+    r = Math.floor(r);
+    g = Math.floor(g);
+    b = Math.floor(b);
+    return ["rgb(",r,",",g,",",b,")"].join("");
+}
+
+function drawCircle(x, y, size, color) {
+    canvas.beginPath();
+    canvas.arc(x, y, size, 0, 2*Math.PI);
+    canvas.fillStyle = color;
+    canvas.fill();
+    canvas.strokeStyle = color;
+    canvas.stroke();
+}
+
 // -------------------------------------------------------------------------
 // World class
 function World() {
@@ -80,19 +96,20 @@ function World() {
         ".....WWWDWWW........",
         "54321543215432154321",
         "...WWWW.WWWWGDD.....",
-        "...WWWG.WWWW..D.....",
+        "...WWWJ.WWWW..D.....",
         "........DDD.GWGGG...",
         ".....GWWWWD.WWDDWW..",
         "......WWWWDWGWWWWW..",
-        ".......WWWDG.G.DG...",
-        "........WWD.G.GGG...",
-        ".........GWWGWW.....",
-        "..........WWGWW.....",
-        "............G......."
+        ".......WWWDJ.J.DR...",
+        "........WWD.L.GRG...",
+        ".........GWWlWW.....",
+        "..........WWlWW.....",
+        "............L......."
     ];
     this.backupmap = this.map.slice();
     this.reset = function() {
-        this.platformTick = 4;
+        this.platformTick = 4; // 1-5
+        this.laserTick = 1; // 1-3
         this.map = this.backupmap.slice();
     }
     this.at = function(x, y) {
@@ -110,7 +127,11 @@ function World() {
         return 430 + y * 50 - x * 47;
     }
     this.update = function() {
-        // Move platforms
+        // Lazer pulse
+        if (++this.laserTick == 4) {
+            this.laserTick = 1;
+        }
+        // Moving platforms
         if (++this.platformTick == 6) {
             this.platformTick = 1;
         }
@@ -135,12 +156,50 @@ function World() {
                     drawImg("GRAY", nx, ny);
                 } else if (tile == "W") {
                     drawImg("WHITE", nx, ny);
+                } else if (tile == "J") {
+                    drawImg("JUMP", nx, ny);
+                } else if (tile == "R") {
+                    drawImg("ROTATE", nx, ny);
                 } else if (tile == "D") {
                     drawImg("DARK", nx, ny);
                 } else if (tile == "d") {
                     // Falling block
                     ny += (gamescale*70);
                     drawImg("DARK", nx, ny);
+                } else if (tile == "L") {
+                    drawImg("GRAY", nx, ny);
+                    drawCircle(nx + 55 + 10, ny + 40, 5, rgb(100, 0, 0));
+                    drawCircle(nx + 55, ny + 40 + 10, 5, rgb(100, 0, 0));
+                    drawCircle(nx + 55 - 10, ny + 40, 5, rgb(100, 0, 0));
+                    drawCircle(nx + 55, ny + 40 - 10, 5, rgb(100, 0, 0));
+                    if (this.laserTick == 1) {
+                        var r = gamescale*100 + 55;
+                        var s = gamescale*10 + 5;
+                        drawCircle(nx + 55, ny + 20, s, rgb(r, 0, 0));
+                    }
+                    if (this.laserTick == 2) {
+                        var r = gamescale*100 + 155;
+                        var s = gamescale*10 + 15;
+                        drawCircle(nx + 55, ny + 20, s, rgb(r, 0, 0));
+                    }
+                    if (this.laserTick == 3) {
+                        var r = 255 - gamescale*200;
+                        var s = 25 - gamescale*20;
+                        drawCircle(nx + 55, ny + 20, s, rgb(r, 0, 0));
+                    }                    
+                } else if (tile == "l") {
+                    drawImg("GRAY", nx, ny);
+                    if (this.laserTick == 2 && gamescale > 0.5) {
+                        var s = gamescale*20 + 5;
+                        drawCircle(nx + 55, ny + 20, s, rgb(255, 0, 0));
+                    }
+                    if (this.laserTick == 3) {
+                        if (gamescale < 0.5) {
+                            var r = 255 - gamescale*200;
+                            var s = 20 - gamescale*40;
+                            drawCircle(nx + 55, ny + 20, s, rgb(r, 0, 0));
+                        }
+                    }
                 }
 
                 if (tile == this.platformTick) {
@@ -163,6 +222,7 @@ function Player() {
 
     this.reset = function() {
         gametick = gamespeed / 2;
+        this.burning = false;
         this.falling = false;
         this.gx = 10;
         this.gy = 10;
@@ -171,6 +231,7 @@ function Player() {
         this.direction = "LEFT";
         this.nextdir = "LEFT";
         this.nextlocked = false;
+        this.jumpdist = 1;
     }
     this.turnRight = function() {
         if (!this.nextlocked) {
@@ -192,7 +253,7 @@ function Player() {
     }
     this.moveDirection = function() {
         this.nextlocked = false;
-        if (this.falling) {
+        if (this.falling || this.burning) {
             world.reset();
             this.reset();
         } else {
@@ -203,12 +264,26 @@ function Player() {
             if (tile == '.' ||
             ((tile == '1' || tile == '2' || tile == '3' || tile == '4' || tile == '5') && (tile != world.platformTick))) {
                 this.falling = true;
+            } else if (tile == 'L' || (tile == 'l' && world.laserTick == 3)) {
+                this.burning = true;
             } else {
-                if (this.nextdir == "UP") { this.nextgy = this.gy - 1; }
-                if (this.nextdir == "DOWN") { this.nextgy = this.gy + 1; }
-                if (this.nextdir == "RIGHT") { this.nextgx = this.gx + 1; }
-                if (this.nextdir == "LEFT") { this.nextgx = this.gx - 1; }
-                this.direction = this.nextdir;
+                this.jumpdist = 1;
+                if (tile == 'J') {
+                    // Force direction to stay
+                    this.nextdir = this.direction;
+                    this.jumpdist = 2;
+                } else if (tile == 'R') {
+                    // Force extra turn right
+                    this.direction = this.nextdir; 
+                    this.turnRight();
+                    this.nextlocked = false;
+                }
+
+                if (this.nextdir == "UP") { this.nextgy = this.gy - this.jumpdist; }
+                if (this.nextdir == "DOWN") { this.nextgy = this.gy + this.jumpdist; }
+                if (this.nextdir == "RIGHT") { this.nextgx = this.gx + this.jumpdist; }
+                if (this.nextdir == "LEFT") { this.nextgx = this.gx - this.jumpdist; }
+                this.direction = this.nextdir;                
             }
 
             if (tile == 'W') {
@@ -233,17 +308,22 @@ function Player() {
         
         if (this.falling) {
             ny += gamescale*200;
+        } else if (this.burning) {
+            ny -= gamescale*400;
         } else {
             // Slide to next grid
             nx -= (nx - world.calcGridX(this.nextgx, this.nextgy)) * gamescale;
             ny -= (ny - world.calcGridY(this.nextgx, this.nextgy)) * gamescale; 
 
             // Add jump effect
-            if (gamescale < .5) ny -= (gamescale*70);
-            else ny -= 70 - (gamescale*70);
+            if (gamescale < .5) ny -= (gamescale*70) * this.jumpdist;
+            else ny -= (70 - (gamescale*70)) * this.jumpdist;
         }
 
         drawImg(this.direction, nx + 25, ny - 35);
+        if (this.burning) {
+            drawCircle(nx + 60, ny + 20, 22, rgb(255, 0, 0));
+        }
     }
 }
 
@@ -262,6 +342,8 @@ var pics = {
     "WHITE": "src/img/whitetile.png",
     "GRAY": "src/img/graytile.png",
     "DARK": "src/img/darktile.png",
+    "JUMP": "src/img/jumptile.png",
+    "ROTATE": "src/img/rotatetile.png",
     "UP": "src/img/walkup.png",
     "DOWN": "src/img/walkdown.png",
     "RIGHT": "src/img/walkright.png",
