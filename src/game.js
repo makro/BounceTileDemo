@@ -56,8 +56,6 @@ htmlCanvas.addEventListener("keyup",
         keyPressed = null;
     }, true);
 
-// -------------------------------------------------------------------------
-// Draw functions
 function drawImg(key, x, y) {
     canvas.drawImage(pics[key], x, y);
 }
@@ -69,73 +67,80 @@ function drawEmptyScreen() {
     canvas.fillRect(1, 1, canvasW-2, canvasH-2);
 }
 
-function drawTestData() {
-    canvas.font = "16px Courier New";
-    canvas.fillStyle = "black";
-    canvas.fillText("Canvas", 130, 110);
+// -------------------------------------------------------------------------
+// World class
+function World() {
 
-    canvas.fillText("Mouse X:" + mouseX + " Y:" + mouseY, 80, 140);
-    if (mouseDown) {
-        canvas.fillText("Mouse pressed", 100, 160);
+    this.map = [
+        "...................",
+        "......DDD..........",
+        ".....WWDWW.........",
+        "....WWWDWGW........",
+        "....WWWDWWW........",
+        "....D..D...........",
+        "..WWWW.WWWWGDD.....",
+        "..WWWG.WWWW..D.....",
+        ".......DDD.GWGGG...",
+        "....GWWWWD.WWDDWW..",
+        ".....WWWWDWGWWWWW..",
+        "......WWWDG.G.DG...",
+        ".......WWD.G.GGG...",
+        "........GWWGWW.....",
+        ".........WWGWW.....",
+        "...........G......."
+    ];
+    this.backupmap = this.map.slice();
+    this.reset = function() {
+        this.map = this.backupmap.slice();
     }
-    if (keyPressed) {
-        canvas.fillText("Key " + keyPressed + " pressed", 90, 180);
+    this.at = function(x, y) {
+        return this.map[y][x];
     }
-}
-
-var world = [
-    "...................",
-    "......WWW..........",
-    ".....WWWWW.........",
-    "....WWWWWWW........",
-    "...WWWWWWWWW.......",
-    "..WWWWDDDWWWW......",
-    "..WWWWWWWWWWWW.....",
-    "..WWWWWWWWWWWWW....",
-    "...WWWWDWWWWDWWWW...",
-    "....WWWDWWWWDWWWW..",
-    ".....WWWWWWWWWWWW..",
-    "......WWWWWWWWWWW..",
-    ".......WWW.WWWWW...",
-    "........WWWWWWW....",
-    ".........WWWWW.....",
-    "..........WWW......"
-];
-
-function changeWorld(x, y, char) {
-    return world[y] = world[y].substring(0, x) + char + world[y].substring(x + 1);
-}
-
-function drawWorld() {
-
-    for(var y = 0; y < 16; y++) {
-        for(var x = 18; x >= 0; x--) {
-            tile = world[y][x];
-            //console.log("tile:" + tile);
-            var nx = -320 + x * 60 + y * 65;
-            var ny = 380 + y * 50 - x * 47;
-
-            if (tile == "G") {
-                drawImg("GRAY", nx, ny);
-            } else if (tile == "W") {
-                drawImg("WHITE", nx, ny);
-            } else if (tile == "D") {
-                drawImg("DARK", nx, ny);
-            }
-
-            if (player.isDrawPosition(x, y)) {
-                player.draw();
+    this.change = function(x, y, char) {
+        this.map[y] =
+            this.map[y].substring(0, x) + char +
+            this.map[y].substring(x + 1);
+    }
+    this.calcGridX = function(x, y) {
+        return -320 + x * 60 + y * 65;
+    }
+    this.calcGridY = function(x, y) {
+        return 380 + y * 50 - x * 47;
+    }
+    this.update = function() {
+        for(var y = 0; y < 16; y++) {
+            for(var x = 18; x >= 0; x--) {
+                tile = world.at(x, y);
+                if (tile == 'd') {
+                    world.change(x, y, '.');
+                }
             }
         }
     }
-}
+    this.draw = function() {
+        for(var y = 0; y < 16; y++) {
+            for(var x = 18; x >= 0; x--) {
+                tile = world.at(x, y);
+                var nx = world.calcGridX(x, y);
+                var ny = world.calcGridY(x, y);
 
-function calcGridX(x, y) {
-    return -320 + x * 60 + y * 65;
-}
+                if (tile == "G") {
+                    drawImg("GRAY", nx, ny);
+                } else if (tile == "W") {
+                    drawImg("WHITE", nx, ny);
+                } else if (tile == "D") {
+                    drawImg("DARK", nx, ny);
+                } else if (tile == "d") {
+                    ny += (gamescale*70);
+                    drawImg("DARK", nx, ny);
+                }
 
-function calcGridY(x, y) {
-    return 380 + y * 50 - x * 47;
+                if (player.isDrawPosition(x, y)) {
+                    player.draw();
+                }
+            }
+        }
+    }    
 }
 
 // -------------------------------------------------------------------------
@@ -146,7 +151,7 @@ function Player() {
         this.falling = false;
         this.gx = 10;
         this.gy = 10;
-        this.nextgx = 9;
+        this.nextgx = 10;
         this.nextgy = 10;
         this.direction = "LEFT";
         this.nextdir = "LEFT";
@@ -173,13 +178,15 @@ function Player() {
     this.moveDirection = function() {
         this.nextlocked = false;
         if (this.falling) {
+            world.reset();
             this.reset();
         }
 
         this.gy = this.nextgy;
         this.gx = this.nextgx;
+        var tile = world.at(this.gx, this.gy);
 
-        if (world[this.gy][this.gx] == '.') {
+        if (tile == '.') {
             this.falling = true;
         } else {
             if (this.nextdir == "UP") { this.nextgy = this.gy - 1; }
@@ -189,11 +196,11 @@ function Player() {
             this.direction = this.nextdir;
         }
 
-        if (world[this.gy][this.gx] == 'W') {
-            changeWorld(this.gx, this.gy, 'G');
+        if (tile == 'W') {
+            world.change(this.gx, this.gy, 'G');
         }
-        if (world[this.gy][this.gx] == 'D') {
-            changeWorld(this.gx, this.gy, '.');
+        if (tile == 'D') {
+            world.change(this.gx, this.gy, 'd');
         }
     }
     this.isDrawPosition = function(x, y) {
@@ -205,15 +212,15 @@ function Player() {
         return (this.gx == x && this.gy == y);
     }
     this.draw = function() {
-        var nx = calcGridX(this.gx, this.gy);
-        var ny = calcGridY(this.gx, this.gy);
+        var nx = world.calcGridX(this.gx, this.gy);
+        var ny = world.calcGridY(this.gx, this.gy);
         
         if (this.falling) {
             ny += gamescale*200;
         } else {
             // Slide to next grid
-            nx -= (nx - calcGridX(this.nextgx, this.nextgy)) * gamescale;
-            ny -= (ny - calcGridY(this.nextgx, this.nextgy)) * gamescale; 
+            nx -= (nx - world.calcGridX(this.nextgx, this.nextgy)) * gamescale;
+            ny -= (ny - world.calcGridY(this.nextgx, this.nextgy)) * gamescale; 
 
             // Add jump effect
             if (gamescale < .5) ny -= (gamescale*70);
@@ -226,9 +233,12 @@ function Player() {
 
 // -------------------------------------------------------------------------
 // Load images and start
-var gamespeed = 50;
-var gametick = 0;
+var gamespeed = 60;
+var gametick = gamespeed / 2;
 var gamescale = 0;
+
+var world = new World();
+    world.reset();
 var player = new Player();
     player.reset();
 
@@ -248,6 +258,7 @@ preloadImages(pics, function() {
 
         if (++gametick > gamespeed) {
             gametick = 0;
+            world.update();
             player.moveDirection();
         }
         gamescale = gametick/gamespeed;
@@ -256,8 +267,7 @@ preloadImages(pics, function() {
         if (keyPressed == "Left") { player.turnLeft(); }
 
         drawEmptyScreen();
-        drawWorld();
-        drawTestData();
+        world.draw();
 
     }, 20 /* milliseconds -> 50Hz */); 
 });
