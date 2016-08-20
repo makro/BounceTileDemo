@@ -83,26 +83,26 @@ function drawTestData() {
     }
 }
 
-function drawWorld() {
+var world = [
+    "...................",
+    "......WWW..........",
+    ".....WWWWW.........",
+    "....WWWWWWW........",
+    "...GGGGGGGGG.......",
+    "..GGGGGGGGGGG......",
+    "..GGGGGGGGGGGG.....",
+    "..DDDDDDDDDDDDD....",
+    "...DDDDD.DDDDDDD...",
+    "....DDDDDDDDDDDWW..",
+    ".....DDDDDDDDDDWW..",
+    "......DDDDDDDDDWW..",
+    ".......DDD.DDDDD...",
+    "........DDDDDDD....",
+    ".........DGGGD.....",
+    "..........GGG......"
+];
 
-    var world = [
-        "...................",
-        "......WWW..........",
-        ".....WWWWW.........",
-        "....WWWWWWW........",
-        "...GGGGGGGGG.......",
-        "..GGGGGGGGGGG......",
-        "..GGGGGGGGGGGG.....",
-        "..DDDDDDDDDDDDD....",
-        "...DDDDD.DDDDDDD...",
-        "....DDDDDDDDDDDWW..",
-        ".....DDDDDDDDDDWW..",
-        "......DDDDDDDDDWW..",
-        ".......DDD.DDDDD...",
-        "........DDDDDDD....",
-        ".........DGGGD.....",
-        "..........GGG......"
-    ];
+function drawWorld() {
 
     for(var y = 0; y < 16; y++) {
         for(var x = 18; x >= 0; x--) {
@@ -120,15 +120,59 @@ function drawWorld() {
             }
         }
     }
+
+    player.draw();
+}
+
+
+function calcGridX(x, y) {
+    return -320 + x * 60 + y * 65;
+}
+
+function calcGridY(x, y) {
+    return 380 + y * 50 - x * 47;
+}
+
+// -------------------------------------------------------------------------
+// Player class
+function Player() {
+    // Use image names as directions
+    this.gx = 10;
+    this.gy = 10;
+    this.nextgx = 9;
+    this.nextgy = 10;
+    this.direction = "LEFT";
+    this.draw = function() {
+        var nx = calcGridX(this.gx, this.gy);
+        var ny = calcGridY(this.gx, this.gy);
+        
+        // Slide to next grid
+        nx -= (nx - calcGridX(this.nextgx, this.nextgy)) * gamescale;
+        ny -= (ny - calcGridY(this.nextgx, this.nextgy)) * gamescale; 
+
+        // Add jump effect
+        if (gamescale < .5) ny -= (gamescale*70);
+        else ny -= 70 - (gamescale*70);
+
+        drawImg(this.direction, nx - 35, ny + 10);
+    }
 }
 
 // -------------------------------------------------------------------------
 // Load images and start
+var gamespeed = 50;
+var gametick = 0;
+var gamescale = 0;
+var player = new Player();
 
 var pics = {
     "WHITE": "src/img/whitetile.png",
     "GRAY": "src/img/graytile.png",
-    "DARK": "src/img/darktile.png"
+    "DARK": "src/img/darktile.png",
+    "UP": "src/img/walkup.png",
+    "DOWN": "src/img/walkdown.png",
+    "RIGHT": "src/img/walkright.png",
+    "LEFT": "src/img/walkleft.png"
 };
 
 preloadImages(pics, function() {
@@ -142,6 +186,32 @@ preloadImages(pics, function() {
         drawEmptyScreen();
         drawWorld();
         drawTestData();
+
+        gametick++;
+        if (gametick > gamespeed) gametick = 0;
+        gamescale = gametick/gamespeed;
+
+        if (keyPressed == "Up") {
+            player.nextgy = player.gy - 1;
+            player.nextgx = player.gx;
+            player.direction = "UP";
+        }
+        if (keyPressed == "Down") {
+            player.nextgy = player.gy + 1;
+            player.nextgx = player.gx;
+            player.direction = "DOWN";
+        }
+        if (keyPressed == "Right") {
+            player.nextgy = player.gy;
+            player.nextgx = player.gx + 1;
+            player.direction = "RIGHT";
+        }
+        if (keyPressed == "Left") {
+            player.nextgy = player.gy;
+            player.nextgx = player.gx - 1;
+            player.direction = "LEFT";
+        }         
+                 
     }, 20 /* milliseconds -> 50Hz */); 
 });
 
