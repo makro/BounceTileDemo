@@ -88,19 +88,23 @@ var world = [
     "......WWW..........",
     ".....WWWWW.........",
     "....WWWWWWW........",
-    "...GGGGGGGGG.......",
-    "..GGGGGGGGGGG......",
-    "..GGGGGGGGGGGG.....",
-    "..DDDDDDDDDDDDD....",
-    "...DDDDD.DDDDDDD...",
-    "....DDDDDDDDDDDWW..",
-    ".....DDDDDDDDDDWW..",
-    "......DDDDDDDDDWW..",
-    ".......DDD.DDDDD...",
-    "........DDDDDDD....",
-    ".........DGGGD.....",
-    "..........GGG......"
+    "...WWWWWWWWW.......",
+    "..WWWWDDDWWWW......",
+    "..WWWWWWWWWWWW.....",
+    "..WWWWWWWWWWWWW....",
+    "...WWWWDWWWWDWWWW...",
+    "....WWWDWWWWDWWWW..",
+    ".....WWWWWWWWWWWW..",
+    "......WWWWWWWWWWW..",
+    ".......WWW.WWWWW...",
+    "........WWWWWWW....",
+    ".........WWWWW.....",
+    "..........WWW......"
 ];
+
+function changeWorld(x, y, char) {
+    return world[y] = world[y].substring(0, x) + char + world[y].substring(x + 1);
+}
 
 function drawWorld() {
 
@@ -118,12 +122,13 @@ function drawWorld() {
             } else if (tile == "D") {
                 drawImg("DARK", nx, ny);
             }
+
+            if (player.isDrawPosition(x, y)) {
+                player.draw();
+            }
         }
     }
-
-    player.draw();
 }
-
 
 function calcGridX(x, y) {
     return -320 + x * 60 + y * 65;
@@ -136,25 +141,86 @@ function calcGridY(x, y) {
 // -------------------------------------------------------------------------
 // Player class
 function Player() {
-    // Use image names as directions
-    this.gx = 10;
-    this.gy = 10;
-    this.nextgx = 9;
-    this.nextgy = 10;
-    this.direction = "LEFT";
+
+    this.reset = function() {
+        this.falling = false;
+        this.gx = 10;
+        this.gy = 10;
+        this.nextgx = 9;
+        this.nextgy = 10;
+        this.direction = "LEFT";
+        this.nextdir = "LEFT";
+        this.nextlocked = false;
+    }
+    this.turnRight = function() {
+        if (!this.nextlocked) {
+            if (this.direction == "UP") this.nextdir = "RIGHT";
+            if (this.direction == "RIGHT") this.nextdir = "DOWN";
+            if (this.direction == "DOWN") this.nextdir = "LEFT";
+            if (this.direction == "LEFT") this.nextdir = "UP";
+            this.nextlocked = true;
+        }
+    }
+    this.turnLeft = function() {
+        if (!this.nextlocked) {
+            if (this.direction == "UP") this.nextdir = "LEFT";
+            if (this.direction == "LEFT") this.nextdir = "DOWN";
+            if (this.direction == "DOWN") this.nextdir = "RIGHT";
+            if (this.direction == "RIGHT") this.nextdir = "UP";
+            this.nextlocked = true;
+        }
+    }
+    this.moveDirection = function() {
+        this.nextlocked = false;
+        if (this.falling) {
+            this.reset();
+        }
+
+        this.gy = this.nextgy;
+        this.gx = this.nextgx;
+
+        if (world[this.gy][this.gx] == '.') {
+            this.falling = true;
+        } else {
+            if (this.nextdir == "UP") { this.nextgy = this.gy - 1; }
+            if (this.nextdir == "DOWN") { this.nextgy = this.gy + 1; }
+            if (this.nextdir == "RIGHT") { this.nextgx = this.gx + 1; }
+            if (this.nextdir == "LEFT") { this.nextgx = this.gx - 1; }
+            this.direction = this.nextdir;
+        }
+
+        if (world[this.gy][this.gx] == 'W') {
+            changeWorld(this.gx, this.gy, 'G');
+        }
+        if (world[this.gy][this.gx] == 'D') {
+            changeWorld(this.gx, this.gy, '.');
+        }
+    }
+    this.isDrawPosition = function(x, y) {
+        if (this.nextgy > this.gy) {
+            return (this.gx == x && this.nextgy == y); 
+        } else if (this.nextgx < this.gx) {
+            return (this.nextgx == x && this.gy == y);
+        }
+        return (this.gx == x && this.gy == y);
+    }
     this.draw = function() {
         var nx = calcGridX(this.gx, this.gy);
         var ny = calcGridY(this.gx, this.gy);
         
-        // Slide to next grid
-        nx -= (nx - calcGridX(this.nextgx, this.nextgy)) * gamescale;
-        ny -= (ny - calcGridY(this.nextgx, this.nextgy)) * gamescale; 
+        if (this.falling) {
+            ny += gamescale*200;
+        } else {
+            // Slide to next grid
+            nx -= (nx - calcGridX(this.nextgx, this.nextgy)) * gamescale;
+            ny -= (ny - calcGridY(this.nextgx, this.nextgy)) * gamescale; 
 
-        // Add jump effect
-        if (gamescale < .5) ny -= (gamescale*70);
-        else ny -= 70 - (gamescale*70);
+            // Add jump effect
+            if (gamescale < .5) ny -= (gamescale*70);
+            else ny -= 70 - (gamescale*70);
+        }
 
-        drawImg(this.direction, nx - 35, ny + 10);
+        drawImg(this.direction, nx + 25, ny - 35);
     }
 }
 
@@ -164,6 +230,7 @@ var gamespeed = 50;
 var gametick = 0;
 var gamescale = 0;
 var player = new Player();
+    player.reset();
 
 var pics = {
     "WHITE": "src/img/whitetile.png",
@@ -176,42 +243,22 @@ var pics = {
 };
 
 preloadImages(pics, function() {
-    console.log("Callback!");
-    _.each(Object.keys(pics), function(key) {
-        console.log("CB: " + key + " = " + pics[key]);
-    });
-
     // Core loop
     setInterval(function() {
+
+        if (++gametick > gamespeed) {
+            gametick = 0;
+            player.moveDirection();
+        }
+        gamescale = gametick/gamespeed;
+
+        if (keyPressed == "Right") { player.turnRight(); }
+        if (keyPressed == "Left") { player.turnLeft(); }
+
         drawEmptyScreen();
         drawWorld();
         drawTestData();
 
-        gametick++;
-        if (gametick > gamespeed) gametick = 0;
-        gamescale = gametick/gamespeed;
-
-        if (keyPressed == "Up") {
-            player.nextgy = player.gy - 1;
-            player.nextgx = player.gx;
-            player.direction = "UP";
-        }
-        if (keyPressed == "Down") {
-            player.nextgy = player.gy + 1;
-            player.nextgx = player.gx;
-            player.direction = "DOWN";
-        }
-        if (keyPressed == "Right") {
-            player.nextgy = player.gy;
-            player.nextgx = player.gx + 1;
-            player.direction = "RIGHT";
-        }
-        if (keyPressed == "Left") {
-            player.nextgy = player.gy;
-            player.nextgx = player.gx - 1;
-            player.direction = "LEFT";
-        }         
-                 
     }, 20 /* milliseconds -> 50Hz */); 
 });
 
