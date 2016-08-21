@@ -92,17 +92,17 @@ function World() {
         "....................",
         ".......GDG..........",
         "......WWDWW.........",
-        ".....WWWDWGW........",
+        ".....WWWDWBW........",
         ".....WWWDWWW........",
         "54321543215432154321",
-        "...WWWW.WWWWGDD.....",
-        "...WWWJ.WWWW..D.....",
-        "........DDD.GWGGG...",
-        ".....GWWWWD.WWDDWW..",
-        "......WWWWDWGWWWWW..",
-        ".......WWWDJ.J.DR...",
-        "........WWD.L.GRG...",
-        ".........GWWlWW.....",
+        "...WWWW.WWWSDDD.....",
+        "...WWWJ.WWWJ..D.....",
+        "......D.DD..BWWWD...",
+        "......WWWWDJSWWWWW..",
+        "......WWWW....DWWW..",
+        ".......WWWDJ.J.RR...",
+        "........WW..L.GRG...",
+        ".........DWWlWW.....",
         "..........WWlWW.....",
         "............L......."
     ];
@@ -110,6 +110,7 @@ function World() {
     this.reset = function() {
         this.platformTick = 4; // 1-5
         this.laserTick = 1; // 1-3
+        this.spikesUp = true;
         this.map = this.backupmap.slice();
     }
     this.at = function(x, y) {
@@ -160,6 +161,14 @@ function World() {
                     drawImg("JUMP", nx, ny);
                 } else if (tile == "R") {
                     drawImg("ROTATE", nx, ny);
+                } else if (tile == "B") {
+                    drawImg("BUTTON", nx, ny);
+                } else if (tile == "S") {
+                    if (this.spikesUp) {
+                        drawImg("SPIKES2", nx + 2, ny - 16);
+                    } else {
+                        drawImg("SPIKES1", nx + 2, ny);
+                    }
                 } else if (tile == "D") {
                     drawImg("DARK", nx, ny);
                 } else if (tile == "d") {
@@ -168,10 +177,10 @@ function World() {
                     drawImg("DARK", nx, ny);
                 } else if (tile == "L") {
                     drawImg("GRAY", nx, ny);
-                    drawCircle(nx + 55 + 10, ny + 40, 5, rgb(100, 0, 0));
-                    drawCircle(nx + 55, ny + 40 + 10, 5, rgb(100, 0, 0));
-                    drawCircle(nx + 55 - 10, ny + 40, 5, rgb(100, 0, 0));
-                    drawCircle(nx + 55, ny + 40 - 10, 5, rgb(100, 0, 0));
+                    drawCircle(nx + 57 + 11, ny + 40, 5, rgb(100, 0, 0));
+                    drawCircle(nx + 56, ny + 40 + 10, 5, rgb(100, 0, 0));
+                    drawCircle(nx + 54 - 11, ny + 40, 5, rgb(100, 0, 0));
+                    drawCircle(nx + 56, ny + 40 - 10, 5, rgb(100, 0, 0));
                     if (this.laserTick == 1) {
                         var r = gamescale*100 + 55;
                         var s = gamescale*10 + 5;
@@ -186,7 +195,7 @@ function World() {
                         var r = 255 - gamescale*200;
                         var s = 25 - gamescale*20;
                         drawCircle(nx + 55, ny + 20, s, rgb(r, 0, 0));
-                    }                    
+                    }
                 } else if (tile == "l") {
                     drawImg("GRAY", nx, ny);
                     if (this.laserTick == 2 && gamescale > 0.5) {
@@ -224,9 +233,9 @@ function Player() {
         gametick = gamespeed / 2;
         this.burning = false;
         this.falling = false;
-        this.gx = 10;
+        this.gx = 9;
         this.gy = 10;
-        this.nextgx = 10;
+        this.nextgx = 9;
         this.nextgy = 10;
         this.direction = "LEFT";
         this.nextdir = "LEFT";
@@ -263,17 +272,19 @@ function Player() {
 
             if (tile == '.' ||
             ((tile == '1' || tile == '2' || tile == '3' || tile == '4' || tile == '5') && (tile != world.platformTick))) {
+                // Fall if no blocks, or missed moving platforms
                 this.falling = true;
-            } else if (tile == 'L' || (tile == 'l' && world.laserTick == 3)) {
+            } else if (tile == 'L' || (tile == 'l' && world.laserTick == 3) || (tile == 'S' && world.spikesUp)) {
+                // You die, "burn", if you touch lazers or spikes
                 this.burning = true;
             } else {
                 this.jumpdist = 1;
                 if (tile == 'J') {
-                    // Force direction to stay
+                    // Force direction to stay for long jumps
                     this.nextdir = this.direction;
                     this.jumpdist = 2;
                 } else if (tile == 'R') {
-                    // Force extra turn right
+                    // Force extra turn right for spinner block
                     this.direction = this.nextdir; 
                     this.turnRight();
                     this.nextlocked = false;
@@ -283,20 +294,24 @@ function Player() {
                 if (this.nextdir == "DOWN") { this.nextgy = this.gy + this.jumpdist; }
                 if (this.nextdir == "RIGHT") { this.nextgx = this.gx + this.jumpdist; }
                 if (this.nextdir == "LEFT") { this.nextgx = this.gx - this.jumpdist; }
-                this.direction = this.nextdir;                
+                this.direction = this.nextdir;
             }
 
-            if (tile == 'W') {
+            if (tile == 'B') {
+                // Toggle spikes up and down
+                world.spikesUp = !world.spikesUp;
+            } else if (tile == 'W') {
+                // Mark white block as stepped on -> gray
                 world.change(this.gx, this.gy, 'G');
-            }
-            if (tile == 'D') {
+            } else if (tile == 'D') {
+                // Mark dark block as stepped on -> falling
                 world.change(this.gx, this.gy, 'd');
             }
         }
     }
     this.isDrawPosition = function(x, y) {
         if (this.nextgy > this.gy) {
-            return (this.gx == x && this.nextgy == y); 
+            return (this.gx == x && this.nextgy == y);
         } else if (this.nextgx < this.gx) {
             return (this.nextgx == x && this.gy == y);
         }
@@ -344,6 +359,9 @@ var pics = {
     "DARK": "src/img/darktile.png",
     "JUMP": "src/img/jumptile.png",
     "ROTATE": "src/img/rotatetile.png",
+    "SPIKES1": "src/img/spikes1tile.png",
+    "SPIKES2": "src/img/spikes2tile.png",
+    "BUTTON": "src/img/buttontile.png",
     "UP": "src/img/walkup.png",
     "DOWN": "src/img/walkdown.png",
     "RIGHT": "src/img/walkright.png",
