@@ -45,7 +45,7 @@ htmlCanvas.addEventListener("keydown",
         else if (evt.keyCode == 83 || evt.keyCode == 40) { keyPressed = "Down"; }
         else if (evt.keyCode == 65 || evt.keyCode == 37) { keyPressed = "Left"; }
         else if (evt.keyCode == 68 || evt.keyCode == 39) { keyPressed = "Right"; }
-        else if (evt.keyCode == 32) { keyPressed = "Spacebar"; }
+        else if (evt.keyCode == 32) { keyPressed = "Space"; }
         else if (evt.keyCode == 16) { keyPressed = "Shift"; }
         else if (evt.keyCode == 17) { keyPressed = "Control"; }
         else if (evt.keyCode == 27) { keyPressed = "Escape"; }
@@ -84,7 +84,7 @@ function drawCircle(x, y, size, color) {
 }
 
 // -------------------------------------------------------------------------
-// World class
+// World class (singleton)
 function World() {
     this.mapH = 16;
     this.mapW = 21;
@@ -97,9 +97,9 @@ function World() {
         "54321543215432154321",
         "...WWWW.WWWSDDD.....",
         "...WWWJ.WWWJ..D.....",
-        "......D.DD..BWWWD...",
+        "......D.DD..BWWW....",
         "......WWWWDJSWWWWW..",
-        "......WWWW....DWWW..",
+        "......WWWW.....WWW..",
         ".......WWWDJ.J.RR...",
         "........WW..L.GRG...",
         ".........DWWlWW.....",
@@ -108,7 +108,7 @@ function World() {
     ];
     this.backupmap = this.map.slice();
     this.reset = function() {
-        this.platformTick = 4; // 1-5
+        this.platformTick = 5; // 1-5
         this.laserTick = 1; // 1-3
         this.spikesUp = true;
         this.map = this.backupmap.slice();
@@ -217,20 +217,28 @@ function World() {
                     drawImg("GRAY", nx, ny);
                 }
 
-                if (player.isDrawPosition(x, y)) {
+                if (player.isDrawPosition(x, y) && !player.isDead()) {
                     player.draw();
+                }
+
+                if (enemy.isDrawPosition(x, y)) {
+                    enemy.draw();
                 }
             }
         }
-    }    
+    }
+
+    // Contructor
+    this.reset();
 }
 
 // -------------------------------------------------------------------------
-// Player class
+// Player class (singleton)
 function Player() {
 
     this.reset = function() {
         gametick = gamespeed / 2;
+        this.dead = false;
         this.burning = false;
         this.falling = false;
         this.gx = 9;
@@ -263,19 +271,23 @@ function Player() {
     this.moveDirection = function() {
         this.nextlocked = false;
         if (this.falling || this.burning) {
-            world.reset();
-            this.reset();
+            this.dead = true;
+            // Press space to reset
+            //enemy.reset();
+            //world.reset();
+            //this.reset();
         } else {
             this.gy = this.nextgy;
             this.gx = this.nextgx;
             var tile = world.at(this.gx, this.gy);
 
             if (tile == '.' ||
-            ((tile == '1' || tile == '2' || tile == '3' || tile == '4' || tile == '5') && (tile != world.platformTick))) {
+                ((tile == '1' || tile == '2' || tile == '3' || tile == '4' || tile == '5') && (tile != world.platformTick))) {
                 // Fall if no blocks, or missed moving platforms
                 this.falling = true;
-            } else if (tile == 'L' || (tile == 'l' && world.laserTick == 3) || (tile == 'S' && world.spikesUp)) {
-                // You die, "burn", if you touch lazers or spikes
+            } else if (enemy.isInPosition(this.gx, this.gy) ||
+                tile == 'L' || (tile == 'l' && world.laserTick == 3) || (tile == 'S' && world.spikesUp)) {
+                // You die, "burn", if you touch lazers or spikes or enemy
                 this.burning = true;
             } else {
                 this.jumpdist = 1;
@@ -317,6 +329,9 @@ function Player() {
         }
         return (this.gx == x && this.gy == y);
     }
+    this.isDead = function() {
+        return this.dead;
+    }
     this.draw = function() {
         var nx = world.calcGridX(this.gx, this.gy);
         var ny = world.calcGridY(this.gx, this.gy);
@@ -340,6 +355,79 @@ function Player() {
             drawCircle(nx + 60, ny + 20, 22, rgb(255, 0, 0));
         }
     }
+
+    // Contructor
+    this.reset();
+}
+
+// -------------------------------------------------------------------------
+// Enemy class (singleton)
+function Enemy() {
+    this.reset = function() {
+        this.gx = this.nextgx = this.path[0][0];
+        this.gy = this.nextgy = this.path[0][1];
+        this.direction = this.nextdir = this.path[0][2];
+        console.log("gx:" + this.gx + " gy:" + this.gy + " dir:" + this.direction);
+    }
+    this.moveDirection = function() {
+        // Check the spot where to turn
+        console.log("nextgx:" + this.nextgx + " nextgy:" + this.nextgy + " dir:" + this.direction);
+        for(var i = 0; i < this.path.length; i++) {
+            if (this.nextgx == this.path[i][0] && this.nextgy == this.path[i][1]) {
+                this.nextdir = this.path[i][2];
+                console.log("SPOT!" + this.nextdir);
+            }
+        }
+
+        this.gx = this.nextgx;
+        this.gy = this.nextgy;
+        if (this.nextdir == "UP") { this.nextgy = this.gy - 1 }
+        if (this.nextdir == "DOWN") { this.nextgy = this.gy + 1 }
+        if (this.nextdir == "RIGHT") { this.nextgx = this.gx + 1 }
+        if (this.nextdir == "LEFT") { this.nextgx = this.gx - 1 }
+        this.direction = this.nextdir;
+    }
+    this.draw = function() {
+        var nx = world.calcGridX(this.gx, this.gy);
+        var ny = world.calcGridY(this.gx, this.gy);
+
+        // Slide to next grid
+        nx -= (nx - world.calcGridX(this.nextgx, this.nextgy)) * gamescale;
+        ny -= (ny - world.calcGridY(this.nextgx, this.nextgy)) * gamescale; 
+
+        if (this.direction == "UP") {
+            drawCircle(nx + 60, ny + 20, 20, rgb(0, 0, 160)); // big
+            drawCircle(nx + 70, ny + 30, 15, rgb(0, 0, 220));
+            drawCircle(nx + 80, ny + 40, 10, rgb(0, 0, 255));
+        } else if (this.direction == "RIGHT") {
+            drawCircle(nx + 60, ny + 20, 20, rgb(0, 0, 160)); // big
+            drawCircle(nx + 50, ny + 30, 15, rgb(0, 0, 220));
+            drawCircle(nx + 40, ny + 40, 10, rgb(0, 0, 255));
+        } else if (this.direction == "DOWN") {
+            drawCircle(nx + 50, ny + 20, 10, rgb(0, 0, 255));
+            drawCircle(nx + 60, ny + 30, 15, rgb(0, 0, 220));
+            drawCircle(nx + 70, ny + 40, 20, rgb(0, 0, 160)); // big
+        } else {
+            drawCircle(nx + 70, ny + 20, 10, rgb(0, 0, 255));
+            drawCircle(nx + 60, ny + 30, 15, rgb(0, 0, 220));
+            drawCircle(nx + 50, ny + 40, 20, rgb(0, 0, 160)); // big
+        }
+    }
+    this.isDrawPosition = function(x, y) {
+        if (this.nextgy > this.gy) {
+            return (this.gx == x && this.nextgy == y);
+        } else if (this.nextgx < this.gx) {
+            return (this.nextgx == x && this.gy == y);
+        }
+        return (this.gx == x && this.gy == y);
+    }
+    this.isInPosition = function(x, y) {
+        return (this.gx == x && this.gy == y);
+    }
+
+    // Contructor
+    this.path = [[14,10,"UP"],[14,8,"RIGHT"],[16,8,"DOWN"],[16,10,"LEFT"]];
+    this.reset();
 }
 
 // -------------------------------------------------------------------------
@@ -348,10 +436,9 @@ var gamespeed = 60;
 var gametick = gamespeed / 2;
 var gamescale = 0;
 
+var enemy = new Enemy();
 var world = new World();
-    world.reset();
 var player = new Player();
-    player.reset();
 
 var pics = {
     "WHITE": "src/img/whitetile.png",
@@ -375,12 +462,18 @@ preloadImages(pics, function() {
         if (++gametick > gamespeed) {
             gametick = 0;
             world.update();
+            enemy.moveDirection();
             player.moveDirection();
         }
         gamescale = gametick/gamespeed;
 
         if (keyPressed == "Right") { player.turnRight(); }
         if (keyPressed == "Left") { player.turnLeft(); }
+        if (keyPressed == "Space") {
+            enemy.reset();
+            world.reset();
+            player.reset();
+        }
 
         drawEmptyScreen();
         world.draw();
