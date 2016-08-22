@@ -61,10 +61,10 @@ function drawImg(key, x, y) {
 }
 
 function drawEmptyScreen() {
-    canvas.fillStyle = "black";
+    canvas.fillStyle = "#1D3505";
     canvas.fillRect(0, 0, canvasW, canvasH);
-    canvas.fillStyle = "white";
-    canvas.fillRect(1, 1, canvasW-2, canvasH-2);
+    canvas.fillStyle = 'transparent';
+    canvas.clearRect(1, 1, canvasW-2, canvasH-2);
 }
 
 function rgb(r, g, b){

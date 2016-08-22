@@ -3,10 +3,35 @@
   <head>
     <meta charset="utf-8"/>
     <title>Bounce tile demo</title>
+    <style>
+      body {
+         background-image: url("src/img/gamebg.jpg");
+         background-size: cover;
+      }
+      html, body {
+          height: 99%;
+      }
+      .Container {
+          text-align: center;
+          height: 100%;
+      }
+      .Container:before {
+          content: '';
+          height: 100%;
+          display: inline-block;
+          vertical-align: middle;
+      }
+      .Content {
+          display: inline-block;
+          vertical-align: middle;
+      }      
+    </style>
   </head>
   <body>
-    <div id="Content">
-  	  <canvas id="htmlcanvas" width="1600" height="800" tabindex="0"></canvas>
+    <div class="Container">
+      <div class="Content">
+        <canvas id="htmlcanvas" width="1600" height="800" tabindex="0"></canvas>
+      </div>
     </div>
     <script type="text/javascript" src="src/underscore-min.js"></script>
     <script type="text/javascript" src="src/preloader.js"></script>    
