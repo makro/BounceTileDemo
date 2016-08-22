@@ -112,6 +112,14 @@ function World() {
         this.laserTick = 1; // 1-3
         this.spikesUp = true;
         this.map = this.backupmap.slice();
+
+        this.tilesGot = 0;
+        this.tilesAll = 0;
+        for(var row of this.map) {
+            for(var ch of row) {
+                if (ch == "W") this.tilesAll++;
+            }
+        }
     }
     this.at = function(x, y) {
         return this.map[y][x];
@@ -315,6 +323,7 @@ function Player() {
             } else if (tile == 'W') {
                 // Mark white block as stepped on -> gray
                 world.change(this.gx, this.gy, 'G');
+                world.tilesGot++;
             } else if (tile == 'D') {
                 // Mark dark block as stepped on -> falling
                 world.change(this.gx, this.gy, 'd');
@@ -432,6 +441,35 @@ function Enemy() {
 
 // -------------------------------------------------------------------------
 // Load images and start
+
+function drawShadowText(x, y, text) {
+    var oldStyle = canvas.fillStyle;
+    canvas.fillStyle = "black";
+    canvas.fillText(text, x + 2, y + 2);
+    canvas.fillStyle = oldStyle;
+    canvas.fillText(text, x, y);
+}
+
+function drawTexts() {
+    canvas.font = "bold 26px Calibri";
+    canvas.fillStyle = "white";
+    canvas.textAlign = "center";
+
+    var ny = 790;
+    if (player.dead) {
+        if (gamescale < .5) ny -= (gamescale*25);
+        else ny -= (25 - (gamescale*25));
+    }
+
+    drawShadowText(800, ny, "Use ARROWS to turn left and right. Use SPACEBAR to restart.");
+    canvas.textAlign = "left";
+    drawShadowText(10, 30, "CONCEPT DEMO");
+    canvas.textAlign = "right";
+    drawShadowText(1590, 30, "TILES GOT " + world.tilesGot + "/" + world.tilesAll);
+}
+
+// -------------------------------------------------------------------------
+// Load images and start
 var gamespeed = 60;
 var gametick = gamespeed / 2;
 var gamescale = 0;
@@ -477,6 +515,7 @@ preloadImages(pics, function() {
 
         drawEmptyScreen();
         world.draw();
+        drawTexts();
 
     }, 20 /* milliseconds -> 50Hz */); 
 });
