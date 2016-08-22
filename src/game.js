@@ -6,6 +6,7 @@
 
 // -------------------------------------------------------------------------
 // Setup canvas variables
+
 var htmlCanvas = document.getElementById('htmlcanvas'),
     canvasW = htmlCanvas.width,
     canvasH = htmlCanvas.height,
@@ -45,6 +46,8 @@ htmlCanvas.addEventListener("keydown",
         else if (evt.keyCode == 83 || evt.keyCode == 40) { keyPressed = "Down"; }
         else if (evt.keyCode == 65 || evt.keyCode == 37) { keyPressed = "Left"; }
         else if (evt.keyCode == 68 || evt.keyCode == 39) { keyPressed = "Right"; }
+        else if (evt.keyCode == 107 || evt.keyCode == 171) { keyPressed = "Plus"; }
+        else if (evt.keyCode == 109 || evt.keyCode == 173) { keyPressed = "Minus"; }
         else if (evt.keyCode == 32) { keyPressed = "Space"; }
         else if (evt.keyCode == 16) { keyPressed = "Shift"; }
         else if (evt.keyCode == 17) { keyPressed = "Control"; }
@@ -85,6 +88,7 @@ function drawCircle(x, y, size, color) {
 
 // -------------------------------------------------------------------------
 // World class (singleton)
+
 function World() {
     this.mapH = 16;
     this.mapW = 21;
@@ -221,7 +225,7 @@ function World() {
 
                 if (tile == this.platformTick) {
                     nx -= (nx - world.calcGridX(x + -1, y)) * gamescale;
-                    ny -= (ny - world.calcGridY(x + -1, y)) * gamescale; 
+                    ny -= (ny - world.calcGridY(x + -1, y)) * gamescale;
                     drawImg("GRAY", nx, ny);
                 }
 
@@ -242,6 +246,7 @@ function World() {
 
 // -------------------------------------------------------------------------
 // Player class (singleton)
+
 function Player() {
 
     this.reset = function() {
@@ -280,10 +285,6 @@ function Player() {
         this.nextlocked = false;
         if (this.falling || this.burning) {
             this.dead = true;
-            // Press space to reset
-            //enemy.reset();
-            //world.reset();
-            //this.reset();
         } else {
             this.gy = this.nextgy;
             this.gx = this.nextgx;
@@ -305,7 +306,7 @@ function Player() {
                     this.jumpdist = 2;
                 } else if (tile == 'R') {
                     // Force extra turn right for spinner block
-                    this.direction = this.nextdir; 
+                    this.direction = this.nextdir;
                     this.turnRight();
                     this.nextlocked = false;
                 }
@@ -344,7 +345,7 @@ function Player() {
     this.draw = function() {
         var nx = world.calcGridX(this.gx, this.gy);
         var ny = world.calcGridY(this.gx, this.gy);
-        
+
         if (this.falling) {
             ny += gamescale*200;
         } else if (this.burning) {
@@ -371,20 +372,18 @@ function Player() {
 
 // -------------------------------------------------------------------------
 // Enemy class (singleton)
+
 function Enemy() {
     this.reset = function() {
         this.gx = this.nextgx = this.path[0][0];
         this.gy = this.nextgy = this.path[0][1];
         this.direction = this.nextdir = this.path[0][2];
-        console.log("gx:" + this.gx + " gy:" + this.gy + " dir:" + this.direction);
     }
     this.moveDirection = function() {
         // Check the spot where to turn
-        console.log("nextgx:" + this.nextgx + " nextgy:" + this.nextgy + " dir:" + this.direction);
         for(var i = 0; i < this.path.length; i++) {
             if (this.nextgx == this.path[i][0] && this.nextgy == this.path[i][1]) {
                 this.nextdir = this.path[i][2];
-                console.log("SPOT!" + this.nextdir);
             }
         }
 
@@ -402,7 +401,7 @@ function Enemy() {
 
         // Slide to next grid
         nx -= (nx - world.calcGridX(this.nextgx, this.nextgy)) * gamescale;
-        ny -= (ny - world.calcGridY(this.nextgx, this.nextgy)) * gamescale; 
+        ny -= (ny - world.calcGridY(this.nextgx, this.nextgy)) * gamescale;
 
         if (this.direction == "UP") {
             drawCircle(nx + 60, ny + 20, 20, rgb(0, 0, 160)); // big
@@ -440,7 +439,6 @@ function Enemy() {
 }
 
 // -------------------------------------------------------------------------
-// Load images and start
 
 function drawShadowText(x, y, text) {
     var oldStyle = canvas.fillStyle;
@@ -462,6 +460,7 @@ function drawTexts() {
     }
 
     drawShadowText(800, ny, "Use ARROWS to turn left and right. Use SPACEBAR to restart.");
+    drawShadowText(800, 30, "[+] " + gameinterval * gamespeed + " ms / jump [-]");
     canvas.textAlign = "left";
     drawShadowText(10, 30, "CONCEPT DEMO");
     canvas.textAlign = "right";
@@ -470,6 +469,7 @@ function drawTexts() {
 
 // -------------------------------------------------------------------------
 // Load images and start
+var gameinterval = 20; // ms
 var gamespeed = 60;
 var gametick = gamespeed / 2;
 var gamescale = 0;
@@ -505,6 +505,8 @@ preloadImages(pics, function() {
         }
         gamescale = gametick/gamespeed;
 
+        if (keyPressed == "Plus") { gamespeed++; }
+        if (keyPressed == "Minus" && gamespeed > 10) { gamespeed--; }
         if (keyPressed == "Right") { player.turnRight(); }
         if (keyPressed == "Left") { player.turnLeft(); }
         if (keyPressed == "Space") {
@@ -517,6 +519,6 @@ preloadImages(pics, function() {
         world.draw();
         drawTexts();
 
-    }, 20 /* milliseconds -> 50Hz */); 
+    }, gameinterval);
 });
 
