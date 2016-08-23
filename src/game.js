@@ -117,11 +117,18 @@ function World() {
         this.spikesUp = true;
         this.map = this.backupmap.slice();
 
-        this.tilesGot = 0;
-        this.tilesAll = 0;
+        this.wtilesGot = 0;
+        this.wtilesAll = 0;
         for(var row of this.map) {
             for(var ch of row) {
-                if (ch == "W") this.tilesAll++;
+                if (ch == "W") this.wtilesAll++;
+            }
+        }
+        this.dtilesGot = 0;
+        this.dtilesAll = 0;
+        for(var row of this.map) {
+            for(var ch of row) {
+                if (ch == "D") this.dtilesAll++;
             }
         }
     }
@@ -308,6 +315,7 @@ function Player() {
                 } else if (tile == 'R') {
                     // Force extra turn right for spinner block
                     this.direction = this.nextdir;
+                    this.keyround = gameround;
                     this.turnRight();
                     this.keylocked = false;
                 }
@@ -325,10 +333,11 @@ function Player() {
             } else if (tile == 'W') {
                 // Mark white block as stepped on -> gray
                 world.change(this.gx, this.gy, 'G');
-                world.tilesGot++;
+                world.wtilesGot++;
             } else if (tile == 'D') {
                 // Mark dark block as stepped on -> falling
                 world.change(this.gx, this.gy, 'd');
+                world.dtilesGot++;
             }
         }
     }
@@ -465,7 +474,17 @@ function drawTexts() {
     canvas.textAlign = "left";
     drawShadowText(10, 30, "CONCEPT DEMO");
     canvas.textAlign = "right";
-    drawShadowText(1590, 30, "TILES GOT " + world.tilesGot + "/" + world.tilesAll);
+    drawShadowText(1590, 30, "WHITE TILES " + world.wtilesGot + "/" + world.wtilesAll);
+    drawShadowText(1590, 60, "DARK TILES " + world.dtilesGot + "/" + world.dtilesAll);
+
+    if (world.wtilesGot == world.wtilesAll && world.dtilesGot == world.dtilesAll) {
+        var ny = 400;
+        if (gamescale > .5) ny -= (gamescale*35);
+        else ny -= (35 - (gamescale*35));
+        canvas.textAlign = "center";
+        drawShadowText(800, ny, "YOU ARE AWESOME!");
+    }
+
 }
 
 // -------------------------------------------------------------------------
