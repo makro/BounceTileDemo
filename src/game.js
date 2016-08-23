@@ -260,29 +260,30 @@ function Player() {
         this.nextgy = 10;
         this.direction = "LEFT";
         this.nextdir = "LEFT";
-        this.nextlocked = false;
+        this.keylocked = false;
+        this.keyround = 0;
         this.jumpdist = 1;
     }
     this.turnRight = function() {
-        if (!this.nextlocked) {
+        if (!this.keylocked && this.keyround == gameround) {
             if (this.direction == "UP") this.nextdir = "RIGHT";
             if (this.direction == "RIGHT") this.nextdir = "DOWN";
             if (this.direction == "DOWN") this.nextdir = "LEFT";
             if (this.direction == "LEFT") this.nextdir = "UP";
-            this.nextlocked = true;
+            this.keylocked = true;
         }
     }
     this.turnLeft = function() {
-        if (!this.nextlocked) {
+        if (!this.keylocked && this.keyround == gameround) {
             if (this.direction == "UP") this.nextdir = "LEFT";
             if (this.direction == "LEFT") this.nextdir = "DOWN";
             if (this.direction == "DOWN") this.nextdir = "RIGHT";
             if (this.direction == "RIGHT") this.nextdir = "UP";
-            this.nextlocked = true;
+            this.keylocked = true;
         }
     }
     this.moveDirection = function() {
-        this.nextlocked = false;
+        this.keylocked = false;
         if (this.falling || this.burning) {
             this.dead = true;
         } else {
@@ -308,7 +309,7 @@ function Player() {
                     // Force extra turn right for spinner block
                     this.direction = this.nextdir;
                     this.turnRight();
-                    this.nextlocked = false;
+                    this.keylocked = false;
                 }
 
                 if (this.nextdir == "UP") { this.nextgy = this.gy - this.jumpdist; }
@@ -473,6 +474,7 @@ var gameinterval = 20; // ms
 var gamespeed = 60;
 var gametick = gamespeed / 2;
 var gamescale = 0;
+var gameround = 0;
 
 var enemy = new Enemy();
 var world = new World();
@@ -498,6 +500,7 @@ preloadImages(pics, function() {
     setInterval(function() {
 
         if (++gametick > gamespeed) {
+            gameround++;
             gametick = 0;
             world.update();
             enemy.moveDirection();
@@ -507,6 +510,7 @@ preloadImages(pics, function() {
 
         if (keyPressed == "Plus") { gamespeed++; }
         if (keyPressed == "Minus" && gamespeed > 10) { gamespeed--; }
+        if (keyPressed == null) { player.keyround = gameround; }
         if (keyPressed == "Right") { player.turnRight(); }
         if (keyPressed == "Left") { player.turnLeft(); }
         if (keyPressed == "Space") {
